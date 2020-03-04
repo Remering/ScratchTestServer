@@ -77,10 +77,7 @@ fun Router.mountFindPassword() {
       return@handler
     }
     if (account.password != newPassword) {
-      database.update(Accounts) {
-        it.password to newPassword
-        where { it.email eq email }
-      }
+      account.password = newPassword
     }
     context.response().end(Json.encode(
       FindPasswordResponseBody(

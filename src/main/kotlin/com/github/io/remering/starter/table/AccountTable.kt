@@ -9,7 +9,7 @@ import java.util.*
 data class Account (
   val uuid: UUID,
   val username: String,
-  val password: String,
+  var password: String,
   val email: String,
   val role: Int
 )
