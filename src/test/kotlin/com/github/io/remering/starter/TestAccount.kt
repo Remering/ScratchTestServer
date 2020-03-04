@@ -45,7 +45,7 @@ class TestAccount {
     assertEquals(ERROR, response["code"])
     assertEquals("参数错误", response["message"])
 
-    val body = RegisterBody("remering", "123456", "1015488424@qq.com", "123456", 0)
+    val body = RegisterBody("remering", PASSWORD_ENCODED, "1015488424@qq.com", "123456", 0)
 
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
@@ -55,6 +55,16 @@ class TestAccount {
     assertEquals(ERROR, response["code"])
     assertEquals("验证码不正确", response["message"])
     body.veriCode = "666666"
+
+
+    body.password = "123456"
+    response = client.postAbs("$BASE_URL/plarform/user/register")
+      .putHeader("Content-Type", "application/json")
+      .rxSendJson(body)
+      .toBlocking()
+      .value().bodyAsJsonObject()
+    assertEquals(ERROR, response["code"])
+    assertEquals("密码格式不正确", response["message"])
 
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")

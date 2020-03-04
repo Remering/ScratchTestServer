@@ -59,6 +59,16 @@ fun Router.mountRegister() {
         ))
       return@handler
     }
+    if (password.length != 64) {
+      context.response().end(
+        Json.encode(
+          RegisterResponse(
+            ERROR,
+            "密码格式不正确"
+          )
+        )
+      )
+    }
     try {
       val emailCount = database.sequenceOf(Accounts)
         .count { it.email eq email }
