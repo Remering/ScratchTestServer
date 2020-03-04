@@ -11,6 +11,7 @@ import me.liuwj.ktorm.dsl.eq
 import me.liuwj.ktorm.dsl.update
 import me.liuwj.ktorm.entity.sequenceOf
 import me.liuwj.ktorm.entity.single
+import me.liuwj.ktorm.entity.singleOrNull
 
 data class ChangePasswordRequestBody @JvmOverloads constructor(
   val oldPassword: String = "",
@@ -84,7 +85,17 @@ fun Router.mountChangePassword() {
         ))
         return@subscribe
       }
-      if (database.sequenceOf(Accounts).single { it.email eq email }.password != oldPassword) {
+      val account = database.sequenceOf(Accounts).singleOrNull { it.email eq email }
+      if (account == null) {
+        context.response().end(Json.encode(
+          ChangePasswordResponseBody(
+            ERROR,
+            "用户不存在"
+          )
+        ))
+        return@subscribe
+      }
+      if (account.password != oldPassword) {
         context.response().end(Json.encode(
           ChangePasswordResponseBody(
             ERROR,
@@ -95,12 +106,8 @@ fun Router.mountChangePassword() {
       }
 
       if (oldPassword != newPassword) {
-        database.update(Accounts) {
-          it.password to newPassword
-          where { it.email eq email }
-        }
+        account.password = newPassword
       }
-
       context.response().end(Json.encode(
         ChangePasswordResponseBody(
           SUCCESS,
