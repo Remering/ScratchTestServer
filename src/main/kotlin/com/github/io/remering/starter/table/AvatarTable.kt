@@ -6,15 +6,15 @@ import me.liuwj.ktorm.schema.text
 import me.liuwj.ktorm.schema.uuid
 import java.util.*
 
-data class Avatar(
+data class AvatarEntity(
   val uuid: UUID,
   var avatarUrl: String
 )
 
-object Avatars: BaseTable<Avatar>("avatars") {
+object Avatars: BaseTable<AvatarEntity>("avatars") {
   val uuid by uuid("uuid")
   val avatarUrl by text("avatar_url")
-  override fun doCreateEntity(row: QueryRowSet, withReferences: Boolean) = Avatar(
+  override fun doCreateEntity(row: QueryRowSet, withReferences: Boolean) = AvatarEntity(
     uuid = row[uuid] ?: UUID.randomUUID(),
     avatarUrl = row[avatarUrl] ?: ""
   )

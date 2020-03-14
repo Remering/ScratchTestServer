@@ -1,4 +1,4 @@
-package com.github.io.remering.starter.api.user.account
+package com.github.io.remering.starter.api.account
 
 import com.github.io.remering.starter.ERROR
 import com.github.io.remering.starter.SUCCESS

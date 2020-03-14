@@ -1,14 +1,10 @@
-package com.github.io.remering.starter.api.user.account
+package com.github.io.remering.starter.api.account
 
-import com.github.io.remering.starter.ERROR
-import com.github.io.remering.starter.FAKE_EMAIL_VERIFICATION_CODE
-import com.github.io.remering.starter.SUCCESS
-import com.github.io.remering.starter.database
+import com.github.io.remering.starter.*
 import com.github.io.remering.starter.table.Accounts
 import io.vertx.core.json.Json
 import io.vertx.reactivex.ext.web.Router
 import me.liuwj.ktorm.dsl.eq
-import me.liuwj.ktorm.dsl.update
 import me.liuwj.ktorm.entity.sequenceOf
 import me.liuwj.ktorm.entity.singleOrNull
 
@@ -79,11 +75,26 @@ fun Router.mountFindPassword() {
     if (account.password != newPassword) {
       account.password = newPassword
     }
-    context.response().end(Json.encode(
-      FindPasswordResponseBody(
-        SUCCESS,
-        "密码修改成功"
-      )
-    ))
+
+    worker.rxExecuteBlocking<Int> {
+      it.complete(account.flushChanges())
+    }.subscribe {
+      if (it != 1) {
+        context.response().end(Json.encode(
+          ChangePasswordResponseBody(
+            WARNING,
+            "密码修改失败"
+          )
+        ))
+        return@subscribe
+      }
+      context.response().end(Json.encode(
+        ChangePasswordResponseBody(
+          SUCCESS,
+          "密码修改成功"
+        )
+      ))
+    }
+
   }
 }

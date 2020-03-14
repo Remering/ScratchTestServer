@@ -1,13 +1,10 @@
-package com.github.io.remering.starter.api.user.account
+package com.github.io.remering.starter.api.account
 
 import com.github.io.remering.starter.*
-import com.github.io.remering.starter.table.Account
+import com.github.io.remering.starter.table.AccountEntity
 import com.github.io.remering.starter.table.Accounts
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
-import io.vertx.ext.auth.User
-import io.vertx.kotlin.core.json.json
-import io.vertx.kotlin.core.json.obj
 
 import io.vertx.reactivex.ext.web.Router
 import me.liuwj.ktorm.dsl.eq
@@ -31,7 +28,7 @@ data class UserPrincipal @JvmOverloads constructor(
   val email: String = "",
   val role: Int = STUDENT
 ) {
-  constructor(account: Account):
+  constructor(account: AccountEntity):
     this(
       uuid = account.uuid.toString(),
       username = account.username,
@@ -44,7 +41,7 @@ data class UserPrincipal @JvmOverloads constructor(
 fun Router.mountLogin() {
   post("/login").handler {context ->
 
-    if (context.request().getHeader("Authorization") != null) {
+    if (context.request().getHeader(AUTHORIZATION) != null) {
       context.response().end(Json.encode(
         LoginResponseBody(
           ERROR,
@@ -73,43 +70,44 @@ fun Router.mountLogin() {
       ))
       return@handler
     }
-    val account= database.sequenceOf(Accounts).singleOrNull {
-      it.email eq requestBody.account
-    }
+    worker.rxExecuteBlocking<AccountEntity?> { promise ->
+      promise.complete(
+        database.sequenceOf(Accounts).singleOrNull {
+        it.email eq requestBody.account
+      })
+    }.subscribe {account ->
+      if (account == null) {
+        context.response().end(Json.encode(
+          LoginResponseBody(
+            ERROR,
+            "用户不存在"
+          )
+        ))
+        return@subscribe
+      }
+      if (account.password != requestBody.password) {
+        context.response().end(Json.encode(
+          LoginResponseBody(
+            ERROR,
+            "账号或密码错误"
+          )
+        ))
+        return@subscribe
+      }
 
-    if (account == null) {
-      context.response().end(Json.encode(
-        LoginResponseBody(
-          ERROR,
-          "用户不存在"
+      val token = jwtAuthProvider.generateToken(JsonObject.mapFrom(
+        UserPrincipal(
+          account
         )
       ))
-      return@handler
-    }
-
-    if (account.password != requestBody.password) {
-      context.response().end(Json.encode(
-        LoginResponseBody(
-          ERROR,
-          "账号或密码错误"
+      context.response().end(
+        Json.encode(
+          LoginResponseBody(SUCCESS, "登录成功", token)
         )
-      ))
-      return@handler
+      )
     }
 
-    val token = jwtAuthProvider.generateToken(JsonObject.mapFrom(UserPrincipal(account)))
-    context.response().end(
-      Json.encode(
-        LoginResponseBody(SUCCESS, "登录成功", token)
-      )
-    )
-  }.failureHandler {
-    it.failure().printStackTrace()
-    it.response().end(Json.encode(
-      LoginResponseBody(
-        ERROR,
-        "服务器内部错误"
-      )
-    ))
+
+
   }
 }

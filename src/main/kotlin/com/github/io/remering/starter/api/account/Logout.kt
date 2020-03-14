@@ -1,8 +1,6 @@
-package com.github.io.remering.starter.api.user.account
+package com.github.io.remering.starter.api.account
 
-import com.github.io.remering.starter.ERROR
-import com.github.io.remering.starter.SUCCESS
-import com.github.io.remering.starter.jwtAuthProvider
+import com.github.io.remering.starter.*
 import io.vertx.core.json.Json
 import io.vertx.kotlin.core.json.json
 import io.vertx.kotlin.core.json.obj
@@ -14,8 +12,11 @@ class LogoutResponseBody (
 )
 
 fun Router.mountLogout() {
-  get("/logout").handler { context ->
-    val token = context.request().getHeader("Authorization")
+
+  get("/logout")
+    .handler(jwtAuthHandler)
+    .handler { context ->
+    val token = context.request().getHeader(AUTHORIZATION)
     if (token == null) {
       context.response().end(Json.encode(
         LogoutResponseBody(
@@ -24,14 +25,8 @@ fun Router.mountLogout() {
       ))
       return@handler
     }
-    jwtAuthProvider.rxAuthenticate(json {
-      obj("jwt" to token)
-    }).subscribe { user, error ->
-      if (error != null) {
-        context.fail(error)
-        return@subscribe
-      }
-      println(user.principal())
+
+      context.clearUser()
       context.response().end(Json.encode(
         LogoutResponseBody(
           SUCCESS,
@@ -40,4 +35,4 @@ fun Router.mountLogout() {
       ))
     }
   }
-}
+

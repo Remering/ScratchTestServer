@@ -1,8 +1,8 @@
 package com.github.io.remering.starter
 
-import com.github.io.remering.starter.api.user.account.LoginRequestBody
-import com.github.io.remering.starter.api.user.account.RegisterBody
-import com.github.io.remering.starter.api.user.profile.UpdateProfileRequestBody
+import com.github.io.remering.starter.api.account.LoginRequestBody
+import com.github.io.remering.starter.api.account.RegisterRequestBody
+import com.github.io.remering.starter.api.profile.UpdateProfileRequestBody
 import io.vertx.kotlin.core.json.get
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
@@ -17,14 +17,14 @@ class TestProfile {
 
   }
 
-  @BeforeEach
+  @AfterEach
   fun clearUpDb() {
     verticle.deleteAll()
   }
 
   @Test
   fun testGetProfile() {
-    val body = RegisterBody(
+    val body = RegisterRequestBody(
       "remering",
       PASSWORD_ENCODED,
       "1015488424@qq.com",
@@ -84,7 +84,7 @@ class TestProfile {
 
   @Test
   fun testUpdateProfile() {
-    val body = RegisterBody(
+    val body = RegisterRequestBody(
       "remering",
       PASSWORD_ENCODED,
       "1015488424@qq.com",
@@ -142,9 +142,11 @@ class TestProfile {
       client.postAbs("$BASE_URL/plarform/user/updateProfile")
         .putHeader("Content-Type", "application/json")
         .putHeader("Authorization", token)
-        .rxSendJson(UpdateProfileRequestBody(
-          null
-        ))
+        .rxSendJson(
+          UpdateProfileRequestBody(
+            null
+          )
+        )
         .toBlocking()
         .value()
         .bodyAsJsonObject()
@@ -162,9 +164,11 @@ class TestProfile {
       client.postAbs("$BASE_URL/plarform/user/updateProfile")
         .putHeader("Content-Type", "application/json")
         .putHeader("Authorization", token)
-        .rxSendJson(UpdateProfileRequestBody(
-          FAKE_AVATAR_URL
-        ))
+        .rxSendJson(
+          UpdateProfileRequestBody(
+            FAKE_AVATAR_URL
+          )
+        )
         .toBlocking()
         .value()
         .bodyAsJsonObject()

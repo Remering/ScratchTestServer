@@ -1,10 +1,14 @@
 package com.github.io.remering.starter
 
+import io.vertx.ext.web.client.WebClientOptions
+import io.vertx.kotlin.ext.web.client.webClientOptionsOf
 import io.vertx.rxjava.core.Vertx
 import io.vertx.rxjava.ext.web.client.WebClient
 
 val vertx = Vertx.vertx()
-val client = WebClient.create(vertx)
+val client = WebClient.create(vertx, webClientOptionsOf(
+  connectTimeout = 1000
+))
 val verticle = MainVerticle()
 
 const val BASE_URL = "http://localhost:6666"

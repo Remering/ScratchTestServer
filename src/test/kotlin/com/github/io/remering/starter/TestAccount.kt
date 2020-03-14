@@ -1,6 +1,6 @@
 package com.github.io.remering.starter
 
-import com.github.io.remering.starter.api.user.account.*
+import com.github.io.remering.starter.api.account.*
 import io.vertx.core.json.Json
 import io.vertx.kotlin.core.json.get
 import org.junit.jupiter.api.*
@@ -18,7 +18,7 @@ class TestAccount {
 
   }
 
-  @BeforeEach
+  @AfterEach
   fun clearUpDb() {
     verticle.deleteAll()
   }
@@ -32,7 +32,6 @@ class TestAccount {
       var veriCode: String,
       var role: Int
     )
-
 
     var response =
     client.postAbs("$BASE_URL/plarform/user/register")
@@ -57,7 +56,7 @@ class TestAccount {
     body.veriCode = "666666"
 
 
-    body.password = "123456"
+    body.password = PASSWORD
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(body)
@@ -66,6 +65,7 @@ class TestAccount {
     assertEquals(ERROR, response["code"])
     assertEquals("密码格式不正确", response["message"])
 
+    body.password = PASSWORD_ENCODED
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(body)
@@ -98,7 +98,6 @@ class TestAccount {
     assertEquals("参数错误", response["message"])
 
 
-
     response = client.postAbs("$BASE_URL/plarform/user/login")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(
@@ -115,7 +114,7 @@ class TestAccount {
     assertEquals("密码格式错误", response["message"])
     assertNull(response["token"])
 
-    val body = RegisterBody(
+    val body = RegisterRequestBody(
       USERNAME,
       PASSWORD_ENCODED,
       "1015488424@qq.com",
@@ -192,7 +191,7 @@ class TestAccount {
     assertEquals(ERROR, response["code"])
     assertEquals("用户未登录", response["message"])
 
-    val body = RegisterBody(
+    val body = RegisterRequestBody(
       ACCOUNT,
       PASSWORD_ENCODED,
       ACCOUNT,
@@ -223,25 +222,25 @@ class TestAccount {
     assertEquals("登录成功", response["message"])
     val token: String? = response["token"]
     assertNotNull(token)
+
     response = client.getAbs("$BASE_URL/plarform/user/logout")
-      .putHeader("Authorization", token)
+      .putHeader("Authorization", "Bearer $token")
       .rxSendJson(body)
       .toBlocking()
       .value().bodyAsJsonObject()
-    println(response)
     assertEquals(SUCCESS, response["code"])
     assertEquals("登出成功", response["message"])
   }
 
   @Test
   fun testChangePassword() {
-   val body = RegisterBody(
-      ACCOUNT,
-      PASSWORD_ENCODED,
-      ACCOUNT,
-      "666666",
-      0
-    )
+   val body = RegisterRequestBody(
+     ACCOUNT,
+     PASSWORD_ENCODED,
+     ACCOUNT,
+     "666666",
+     0
+   )
     var response = client.postAbs("$BASE_URL/plarform/user/changePassword")
       .putHeader("Content-Type", "application/json")
       .rxSend().toBlocking()
@@ -275,7 +274,7 @@ class TestAccount {
     assertNotNull(token)
     response = client.postAbs("$BASE_URL/plarform/user/changePassword")
       .putHeader("Content-Type", "application/json")
-      .putHeader("Authorization", token)
+      .putHeader("Authorization", "Bearer $token")
       .rxSend().toBlocking()
       .value().bodyAsJsonObject()
     assertEquals(ERROR, response["code"])
@@ -283,7 +282,7 @@ class TestAccount {
 
     response = client.postAbs("$BASE_URL/plarform/user/changePassword")
       .putHeader("Content-Type", "application/json")
-      .putHeader("Authorization", token)
+      .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
           oldPassword = PASSWORD_ENCODED,
@@ -297,7 +296,7 @@ class TestAccount {
 
     response = client.postAbs("$BASE_URL/plarform/user/changePassword")
       .putHeader("Content-Type", "application/json")
-      .putHeader("Authorization", token)
+      .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
           oldPassword = PASSWORD_ENCODED,
@@ -312,7 +311,7 @@ class TestAccount {
 
     response = client.postAbs("$BASE_URL/plarform/user/changePassword")
       .putHeader("Content-Type", "application/json")
-      .putHeader("Authorization", token)
+      .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
           oldPassword = FAKE_PASSWORD_ENCODED,
@@ -327,7 +326,7 @@ class TestAccount {
 
     response = client.postAbs("$BASE_URL/plarform/user/changePassword")
       .putHeader("Content-Type", "application/json")
-      .putHeader("Authorization", token)
+      .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
           oldPassword = PASSWORD_ENCODED,
@@ -343,7 +342,7 @@ class TestAccount {
 
     response = client.postAbs("$BASE_URL/plarform/user/changePassword")
       .putHeader("Content-Type", "application/json")
-      .putHeader("Authorization", token)
+      .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
           oldPassword = PASSWORD_ENCODED,
@@ -378,7 +377,7 @@ class TestAccount {
     val account = "1015488424@qq.com"
     val passwordEncoded = "e150a1ec81e8e93e1eae2c3a77e66ec6dbd6a3b460f89c1d08aecf422ee401a0"
     val fakePasswordEncoded = "f33ae3bc9a22cd7564990a794789954409977013966fb1a8f43c35776b833a95"
-    val body = RegisterBody(
+    val body = RegisterRequestBody(
       USERNAME,
       passwordEncoded,
       account,
@@ -391,6 +390,7 @@ class TestAccount {
       .value().bodyAsJsonObject()
     assertEquals(ERROR, response["code"])
     assertEquals("参数错误", response["message"])
+
 
     response = client.postAbs("$BASE_URL/plarform/user/findPassword")
       .putHeader("Content-Type", "application/json")
@@ -496,7 +496,6 @@ class TestAccount {
       )
       .toBlocking()
       .value().bodyAsString()
-    println(responseBody)
     var responseBodyJson: SendVerificationCodeResponseBody? = null
     try {
       responseBodyJson = Json.decodeValue(responseBody, SendVerificationCodeResponseBody::class.java)
