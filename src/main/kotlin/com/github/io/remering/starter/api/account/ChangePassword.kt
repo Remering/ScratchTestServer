@@ -12,8 +12,7 @@ import me.liuwj.ktorm.entity.singleOrNull
 data class ChangePasswordRequestBody @JvmOverloads constructor(
   val oldPassword: String = "",
   val newPassword: String = "",
-  val newPasswordConfirm: String = "",
-  val veriCode: String = ""
+  val newPasswordConfirm: String = ""
 )
 
 class ChangePasswordResponseBody(
@@ -39,19 +38,9 @@ fun Router.mountChangePassword() {
         )
         return@handler
       }
-      val (oldPassword, newPassword, newPasswordConfirm, veriCode) = requestBody
+      val (oldPassword, newPassword, newPasswordConfirm) = requestBody
 
-      if (veriCode != FAKE_EMAIL_VERIFICATION_CODE) {
-        context.response().end(
-          Json.encode(
-            ChangePasswordResponseBody(
-              ERROR,
-              "验证码不正确"
-            )
-          )
-        )
-        return@handler
-      }
+
       if (!arrayOf(oldPassword, newPassword, newPasswordConfirm).map { it.length }.all { it == 64 }) {
         context.response().end(
           Json.encode(

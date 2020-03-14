@@ -98,6 +98,7 @@ class TestAccount {
     assertEquals("参数错误", response["message"])
 
 
+
     response = client.postAbs("$BASE_URL/plarform/user/login")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(
@@ -238,8 +239,8 @@ class TestAccount {
      ACCOUNT,
      PASSWORD_ENCODED,
      ACCOUNT,
-     "666666",
-     0
+     FAKE_EMAIL_VERIFICATION_CODE,
+     STUDENT
    )
     var response = client.postAbs("$BASE_URL/plarform/user/changePassword")
       .putHeader("Content-Type", "application/json")
@@ -287,22 +288,7 @@ class TestAccount {
         ChangePasswordRequestBody(
           oldPassword = PASSWORD_ENCODED,
           newPassword = PASSWORD_ENCODED,
-          newPasswordConfirm = PASSWORD_ENCODED
-        )
-      ).toBlocking()
-      .value().bodyAsJsonObject()
-    assertEquals(ERROR, response["code"])
-    assertEquals("验证码不正确", response["message"])
-
-    response = client.postAbs("$BASE_URL/plarform/user/changePassword")
-      .putHeader("Content-Type", "application/json")
-      .putHeader("Authorization", "Bearer $token")
-      .rxSendJson(
-        ChangePasswordRequestBody(
-          oldPassword = PASSWORD_ENCODED,
-          newPassword = PASSWORD_ENCODED,
-          newPasswordConfirm = FAKE_PASSWORD_ENCODED,
-          veriCode = FAKE_EMAIL_VERIFICATION_CODE
+          newPasswordConfirm = FAKE_PASSWORD_ENCODED
         )
       ).toBlocking()
       .value().bodyAsJsonObject()
@@ -316,8 +302,7 @@ class TestAccount {
         ChangePasswordRequestBody(
           oldPassword = FAKE_PASSWORD_ENCODED,
           newPassword = PASSWORD_ENCODED,
-          newPasswordConfirm = PASSWORD_ENCODED,
-          veriCode = FAKE_EMAIL_VERIFICATION_CODE
+          newPasswordConfirm = PASSWORD_ENCODED
         )
       ).toBlocking()
       .value().bodyAsJsonObject()
@@ -331,8 +316,7 @@ class TestAccount {
         ChangePasswordRequestBody(
           oldPassword = PASSWORD_ENCODED,
           newPassword = "12345",
-          newPasswordConfirm = "12345",
-          veriCode = FAKE_EMAIL_VERIFICATION_CODE
+          newPasswordConfirm = "12345"
         )
       ).toBlocking()
       .value().bodyAsJsonObject()
@@ -347,8 +331,7 @@ class TestAccount {
         ChangePasswordRequestBody(
           oldPassword = PASSWORD_ENCODED,
           newPassword = FAKE_PASSWORD_ENCODED,
-          newPasswordConfirm = FAKE_PASSWORD_ENCODED,
-          veriCode = FAKE_EMAIL_VERIFICATION_CODE
+          newPasswordConfirm = FAKE_PASSWORD_ENCODED
         )
       ).toBlocking()
       .value().bodyAsJsonObject()
