@@ -1,33 +1,43 @@
 package com.github.io.remering.starter.api.course
 
 import com.github.io.remering.starter.*
+import com.github.io.remering.starter.api.pojo.Course
 import com.github.io.remering.starter.table.CourseEntity
 import com.github.io.remering.starter.table.Courses
 import io.vertx.core.json.Json
 import io.vertx.kotlin.core.json.get
+import io.vertx.reactivex.core.file.FileSystem
+import io.vertx.reactivex.ext.web.FileUpload
 import io.vertx.reactivex.ext.web.Router
 import me.liuwj.ktorm.entity.add
 import me.liuwj.ktorm.entity.sequenceOf
+import java.io.File
 import java.util.*
 
 
-data class CreateCourseRequestBody(
-  val name: String = "",
-  val introduction: String = "",
-  val picture: String = "",
-  val video: String = "",
-  val file: String = ""
-)
 class CreateCourseResponseBody (
   val code: Int,
   val message: String,
   val course: Course? = null
 )
 
+fun FileUpload.getUrl(uploadedName: String): String {
+  var filePath = uploadedName
+  if (File.separatorChar != '/') {
+    filePath = filePath.replace(File.separatorChar, '/')
+  }
+  return filePath
+}
 
+fun FileUpload.renameWithExtension(fs: FileSystem): String {
+  val extension = fileName().substringAfter(".")
+  val renamedName = "${uploadedFileName()}.${extension}"
+  fs.moveBlocking(uploadedFileName(), renamedName)
+  return renamedName
+}
 
 fun Router.mountCreateCourse() {
-  post("/updateCourse")
+  post("/createCourse")
     .handler(jwtAuthHandler)
     .handler { context ->
       val principal = context.user().principal()
@@ -40,13 +50,27 @@ fun Router.mountCreateCourse() {
         ))
         return@handler
       }
-      val requestBody = try {
-        context.bodyAsJson?.mapTo(CreateCourseRequestBody::class.java)
-      } catch (e: Throwable) {
-        context.fail(e)
-        return@handler
+      val uploads = context.fileUploads()
+      val name = context.request().getFormAttribute("name")
+      val introduction = context.request().getFormAttribute("introduction")
+      val pictureSha256 = context.request().getFormAttribute("pictureSha256")
+      val videoSha256 = context.request().getFormAttribute("videoSha256")
+      val fileSha256 = context.request().getFormAttribute("fileSha256")
+      var fileUpload: FileUpload? = null
+      var pictureUpload: FileUpload? = null
+      var videoUpload: FileUpload? = null
+
+      uploads.forEach {
+        when(it.name()) {
+          "file" -> fileUpload = it
+          "picture" -> pictureUpload = it
+          "video" -> videoUpload = it
+        }
       }
-      if (requestBody == null) {
+
+
+//      context.response().end("Helloworld")
+      if (arrayOf(name, introduction, fileUpload, pictureUpload, videoUpload).any { it == null}) {
         context.response().end(Json.encode(
           CreateCourseResponseBody(
             ERROR, "参数错误"
@@ -55,33 +79,36 @@ fun Router.mountCreateCourse() {
         return@handler
       }
 
-      val teacherUUID: String = principal["uuid"]
-      val courseUUID = UUID.randomUUID()
-      val (name, introduction, picture, video, file) = requestBody
-      val entity = CourseEntity {
-        uuid = courseUUID
+
+
+
+      val fs = context.vertx().fileSystem()
+      val fileUrl = fileUpload!!.getUrl(fileUpload!!.renameWithExtension(fs))
+      val pictureUrl = pictureUpload!!.getUrl(pictureUpload!!.renameWithExtension(fs))
+      val videoUrl = videoUpload!!.getUrl(videoUpload!!.renameWithExtension(fs))
+
+      println("fileUUID = $fileUrl")
+      println("pictureUrl = $pictureUrl")
+      println("videoUrl = $videoUrl")
+      val course
+        = CourseEntity {
         this.name = name
         this.introduction = introduction
-        this.picture = picture
-        this.teacher = UUID.fromString(teacherUUID)
-        this.video = video
-        this.file = file
+        file = fileUrl
+        picture = pictureUrl
+        video = videoUrl
+        teacher = principal["uuid"]
+        uuid = UUID.randomUUID().toString()
       }
-      worker.rxExecuteBlocking<Int> {
-        it.complete(database.sequenceOf(Courses).add(entity))
-      }.doOnError(context::fail)
-      .subscribe {
-        if (it != 1) {
-          context.response().end(Json.encode(
-            CreateCourseResponseBody(ERROR, "创建失败")
-          ))
-          return@subscribe
-        }
-        context.response().end(Json.encode(
-          CreateCourseResponseBody(SUCCESS, "创建成功",
-            Course(courseUUID.toString(), name, introduction, picture, teacherUUID, video, file)
-            )
-        ))
-      }
+      context.response().end(Json.encode(
+        CreateCourseResponseBody(
+          SUCCESS, "创建成功",
+            Course(course, context.request().host())
+        )
+      ))
+      println("insert into database")
+
+      database.sequenceOf(Courses).add(course)
+
   }
 }
