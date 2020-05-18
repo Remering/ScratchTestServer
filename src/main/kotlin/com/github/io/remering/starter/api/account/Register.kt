@@ -13,8 +13,9 @@ import java.util.*
 data class RegisterRequestBody(
   val username: String,
   val password: String,
+  val repeatedPassword: String,
   val email: String,
-  val veriCode: String,
+  val verificationCode: String,
   val role: Int
 ) {
   @Suppress("unused")
@@ -23,7 +24,17 @@ data class RegisterRequestBody(
     "",
     "",
     "",
+    "",
     0
+  )
+  constructor(
+    username: String,
+    password: String,
+    email: String,
+    verificationCode: String,
+    role: Int
+  ): this  (
+    username, password, password, email, verificationCode, role
   )
 }
 
@@ -35,7 +46,11 @@ class RegisterResponseBody(
 fun Router.mountRegister() {
 
   post("/register").handler { context ->
-    val body = context.bodyAsJson?.mapTo(RegisterRequestBody::class.java)
+    val body = try {
+      context.bodyAsJson?.mapTo(RegisterRequestBody::class.java)
+    } catch (t: Throwable) {
+      null
+    }
     if (body == null) {
       context.response().end(
         Json.encode(
@@ -46,7 +61,7 @@ fun Router.mountRegister() {
         ))
       return@handler
     }
-    val (username, password, email, veriCode, role) = body
+    val (username, password, repeatedPassword, email, veriCode, role) = body
     if (veriCode != FAKE_EMAIL_VERIFICATION_CODE) {
       context.response().end(
         Json.encode(
@@ -68,6 +83,16 @@ fun Router.mountRegister() {
       )
       return@handler
     }
+    if (password != repeatedPassword) {
+      context.response().end(
+        Json.encode(
+          RegisterResponseBody(
+            ERROR, "密码与重复密码不一致"
+          )
+        )
+      )
+      return@handler
+    }
     val emailCount = database.sequenceOf(Accounts).count { it.email eq email }
 
     if (emailCount > 0) {
@@ -81,7 +106,7 @@ fun Router.mountRegister() {
       return@handler
     }
     database.insert(Accounts) {
-      it.uuid to UUID.randomUUID()
+      it.uuid to UUID.randomUUID().toString()
       it.username to username
       it.password to password
       it.email to email
