@@ -35,11 +35,23 @@ import java.util.*
 
 
 fun Router.mountCorsHandler() {
-  val corsHandler = CorsHandler.create("")
-  corsHandler.allowedHeaders(setOf("*"))
-//  corsHandler.allowCredentials(true)
-  corsHandler.allowedMethods(EnumSet.allOf(HttpMethod::class.java))
-  route().handler(corsHandler)
+  route().handler(
+    CorsHandler.create("http://localhost:8080")
+      .allowedMethods(EnumSet.allOf(HttpMethod::class.java))
+      .allowCredentials(true)
+      .allowedHeaders(
+        setOf(
+          "Access-Control-Allow-Origin",
+          "Access-Control-Allow-Credentials",
+          "X-PINGARUNER",
+          "X-Request-With",
+          "Origin",
+          "Content-Type",
+          "Accept",
+          "Authorization "
+        )
+      )
+  )
 }
 
 fun Router.mountBodyHandler() {
