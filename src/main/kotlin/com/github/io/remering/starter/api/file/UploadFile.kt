@@ -6,6 +6,7 @@ import com.github.io.remering.starter.calculateSha256
 import com.github.io.remering.starter.jwtAuthHandler
 import io.vertx.core.json.Json
 import io.vertx.reactivex.ext.web.Router
+import io.vertx.reactivex.ext.web.handler.TimeoutHandler
 import java.io.File
 
 class UploadFileResponseBody(
@@ -16,8 +17,10 @@ class UploadFileResponseBody(
 
 fun Router.mountUploadFile() {
   post("/uploadFile")
+    .handler(TimeoutHandler.create(5000L))
     .handler(jwtAuthHandler)
     .handler { context ->
+
       val sha256 = context.request().getFormAttribute("sha256")
       val fileUpload = context.fileUploads().firstOrNull()
       if (sha256 == null || fileUpload == null) {
@@ -30,6 +33,7 @@ fun Router.mountUploadFile() {
             context.fail(error)
             return@subscribe
           }
+          println("开始校验文件")
           val calculatedSha256 = calculateSha256(buffer.bytes)
           if (calculatedSha256 != sha256) {
             context.vertx().fileSystem().deleteBlocking(fileUpload.uploadedFileName())
