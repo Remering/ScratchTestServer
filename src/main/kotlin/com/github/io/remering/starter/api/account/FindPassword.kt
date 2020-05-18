@@ -88,12 +88,13 @@ fun Router.mountFindPassword() {
         ))
         return@subscribe
       }
-      context.response().end(Json.encode(
-        ChangePasswordResponseBody(
+      context.response()
+        .putHeader("content-type", "application/json;charset=utf-8")
+        .end(Json.encode(ChangePasswordResponseBody(
           SUCCESS,
           "密码修改成功"
         )
-      ))
+      ), Charsets.UTF_8.displayName())
     }
 
   }
