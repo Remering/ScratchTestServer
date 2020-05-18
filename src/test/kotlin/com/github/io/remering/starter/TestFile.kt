@@ -2,7 +2,6 @@ package com.github.io.remering.starter
 
 import com.github.io.remering.starter.api.account.LoginRequestBody
 import com.github.io.remering.starter.api.account.RegisterRequestBody
-import com.sun.org.apache.xml.internal.security.algorithms.implementations.SignatureDSA
 import io.vertx.kotlin.core.json.get
 import io.vertx.rxjava.ext.web.multipart.MultipartForm
 import org.junit.jupiter.api.AfterAll
@@ -10,10 +9,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.io.File
-import java.math.BigInteger
-import java.nio.file.*
-import java.security.MessageDigest
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 
 
@@ -59,8 +57,8 @@ class TestFile {
   @Test
   fun testUploadFile() {
     val registerRequestBody = RegisterRequestBody(
-      USERNAME,
-      PASSWORD_ENCODED,
+      STUDENT_USERNAME,
+      STUDENT_PASSWORD_ENCODED,
       "1015488424@qq.com",
       "666666",
       0
@@ -78,8 +76,8 @@ class TestFile {
         .putHeader("Content-Type", "application/json")
         .rxSendJson(
           LoginRequestBody(
-            ACCOUNT,
-            PASSWORD_ENCODED
+            STUDENT_ACCOUNT,
+            STUDENT_PASSWORD_ENCODED
           )
         )
         .toBlocking()
@@ -117,6 +115,7 @@ class TestFile {
     response = client.postAbs("$BASE_URL/plarform/user/uploadFile")
       .putHeader("Authorization", "Bearer $token")
       .rxSendMultipartForm(form)
+
       .toBlocking()
       .value()
       .bodyAsJsonObject()
@@ -140,13 +139,14 @@ class TestFile {
     assertEquals(SUCCESS, response["code"])
     assertEquals("文件上传成功", response["message"])
     assertNotNull(response["url"])
+
   }
 
   @Test
   fun testGetFile() {
     val registerRequestBody = RegisterRequestBody(
-      USERNAME,
-      PASSWORD_ENCODED,
+      STUDENT_USERNAME,
+      STUDENT_PASSWORD_ENCODED,
       "1015488424@qq.com",
       "666666",
       0
@@ -164,8 +164,8 @@ class TestFile {
         .putHeader("Content-Type", "application/json")
         .rxSendJson(
           LoginRequestBody(
-            ACCOUNT,
-            PASSWORD_ENCODED
+            STUDENT_ACCOUNT,
+            STUDENT_PASSWORD_ENCODED
           )
         )
         .toBlocking()
@@ -200,9 +200,10 @@ class TestFile {
         .rxSend()
         .toBlocking()
         .value()
-        .body().bytes
+        .body()
+    println(rawResponseBody)
     val testBuffer = Files.readAllBytes(testPath)
-    assertArrayEquals(testBuffer, rawResponseBody)
+    assertArrayEquals(testBuffer, rawResponseBody.bytes)
 
   }
 }

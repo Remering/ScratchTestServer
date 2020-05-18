@@ -1,6 +1,5 @@
 package com.github.io.remering.starter
 
-import com.github.io.remering.starter.MainVerticle
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
@@ -13,7 +12,7 @@ class TestMainVerticle {
 
   @BeforeEach
   fun deployVerticle(vertx: Vertx, testContext: VertxTestContext) {
-    vertx.deployVerticle(MainVerticle(), testContext.succeeding<String> { _ -> testContext.completeNow() })
+    vertx.deployVerticle(MainVerticle(), testContext.succeeding { testContext.completeNow() })
   }
 
   @Test

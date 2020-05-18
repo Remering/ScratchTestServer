@@ -3,8 +3,10 @@ package com.github.io.remering.starter
 import com.github.io.remering.starter.api.account.*
 import io.vertx.core.json.Json
 import io.vertx.kotlin.core.json.get
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 
 class TestAccount {
@@ -33,6 +35,7 @@ class TestAccount {
       var role: Int
     )
 
+    println("测试参数错误")
     var response =
     client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
@@ -40,45 +43,52 @@ class TestAccount {
       .toBlocking()
       .value()
       .bodyAsJsonObject()
-
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("参数错误", response["message"])
 
-    val body = RegisterBody("remering", PASSWORD_ENCODED, "1015488424@qq.com", "123456", 0)
+    val body = RegisterBody("remering", STUDENT_PASSWORD_ENCODED, "1015488424@qq.com", "123456", 0)
 
+    println("测试验证码不正确")
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(body)
       .toBlocking()
       .value().bodyAsJsonObject()
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("验证码不正确", response["message"])
+
+    println("测试密码格式不正确")
     body.veriCode = "666666"
-
-
-    body.password = PASSWORD
+    body.password = STUDENT_PASSWORD
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(body)
       .toBlocking()
       .value().bodyAsJsonObject()
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("密码格式不正确", response["message"])
 
-    body.password = PASSWORD_ENCODED
+    println("测试注册成功")
+    body.password = STUDENT_PASSWORD_ENCODED
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(body)
       .toBlocking()
       .value().bodyAsJsonObject()
+    println(response)
     assertEquals(SUCCESS, response["code"])
     assertEquals("注册成功", response["message"])
 
+    println("测试邮箱已被使用")
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(body)
       .toBlocking()
       .value().bodyAsJsonObject()
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("邮箱已被使用", response["message"])
 
@@ -87,95 +97,126 @@ class TestAccount {
 
   @Test
   fun testLogin() {
-    var response =
+    println("测试参数错误")
+    val rawResponse =
       client.postAbs("$BASE_URL/plarform/user/login")
         .putHeader("Content-Type", "application/json")
         .rxSend()
         .toBlocking()
         .value()
-        .bodyAsJsonObject()
+    for ((k, v) in rawResponse.headers().entries()) {
+      println("$k: $v")
+    }
+    var response = rawResponse.bodyAsJsonObject()
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("参数错误", response["message"])
 
-
-
+    println("测试密码格式错误")
     response = client.postAbs("$BASE_URL/plarform/user/login")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(
         LoginRequestBody(
-          ACCOUNT,
-          PASSWORD
+          TEACHER_ACCOUNT,
+          STUDENT_PASSWORD
         )
       )
       .toBlocking()
       .value()
       .bodyAsJsonObject()
-
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("密码格式错误", response["message"])
     assertNull(response["token"])
 
+    println("测试用户不存在")
+    response = client.postAbs("$BASE_URL/plarform/user/login")
+      .putHeader("Content-Type", "application/json")
+      .rxSendJson(
+        LoginRequestBody(
+          STUDENT_ACCOUNT,
+          STUDENT_PASSWORD_ENCODED
+        )
+      )
+      .toBlocking()
+      .value()
+      .bodyAsJsonObject()
+    println(response)
+    assertEquals(ERROR, response["code"])
+    assertEquals("用户不存在", response["message"])
+    assertNull(response["token"])
+
+    println("测试注册成功")
     val body = RegisterRequestBody(
-      USERNAME,
-      PASSWORD_ENCODED,
-      "1015488424@qq.com",
-      "666666",
-      0
+      STUDENT_USERNAME,
+      STUDENT_PASSWORD_ENCODED,
+      STUDENT_ACCOUNT,
+      FAKE_EMAIL_VERIFICATION_CODE,
+      STUDENT
     )
     response = client.postAbs("$BASE_URL/plarform/user/register")
       .putHeader("Content-Type", "application/json")
       .rxSendJson(body)
       .toBlocking()
       .value().bodyAsJsonObject()
+    println(response)
     assertEquals(SUCCESS, response["code"])
     assertEquals("注册成功", response["message"])
 
+
+    println("测试账号或密码错误")
     response =
       client.postAbs("$BASE_URL/plarform/user/login")
         .putHeader("Content-Type", "application/json")
         .rxSendJson(
           LoginRequestBody(
-            ACCOUNT,
-            FAKE_PASSWORD_ENCODED
+            STUDENT_ACCOUNT,
+            TEACHER_PASSWORD_ENCODED
           )
         )
         .toBlocking()
         .value()
         .bodyAsJsonObject()
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("账号或密码错误", response["message"])
     assertNull(response["token"])
 
+    println("测试登录成功")
     response =
       client.postAbs("$BASE_URL/plarform/user/login")
         .putHeader("Content-Type", "application/json")
         .rxSendJson(
           LoginRequestBody(
-            ACCOUNT,
-            PASSWORD_ENCODED
+            STUDENT_ACCOUNT,
+            STUDENT_PASSWORD_ENCODED
           )
         )
         .toBlocking()
         .value()
         .bodyAsJsonObject()
+    println(response)
+
     assertEquals(SUCCESS, response["code"])
     assertEquals("登录成功", response["message"])
     val token: String? = response["token"]
     assertNotNull(token)
 
+    println("测试用户已登录")
     response =
       client.postAbs("$BASE_URL/plarform/user/login")
         .putHeader("Content-Type", "application/json")
         .putHeader("Authorization", "Bearer $token")
         .rxSendJson(
           LoginRequestBody(
-            ACCOUNT,
-            PASSWORD_ENCODED
+            TEACHER_ACCOUNT,
+            STUDENT_PASSWORD_ENCODED
           )
         )
         .toBlocking()
         .value()
         .bodyAsJsonObject()
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("用户已登录", response["message"])
     assertNull(response["token"])
@@ -193,9 +234,9 @@ class TestAccount {
     assertEquals("用户未登录", response["message"])
 
     val body = RegisterRequestBody(
-      ACCOUNT,
-      PASSWORD_ENCODED,
-      ACCOUNT,
+      TEACHER_ACCOUNT,
+      STUDENT_PASSWORD_ENCODED,
+      TEACHER_ACCOUNT,
       FAKE_EMAIL_VERIFICATION_CODE,
       0
     )
@@ -212,8 +253,8 @@ class TestAccount {
         .putHeader("Content-Type", "application/json")
         .rxSendJson(
           LoginRequestBody(
-            ACCOUNT,
-            PASSWORD_ENCODED
+            TEACHER_ACCOUNT,
+            STUDENT_PASSWORD_ENCODED
           )
         )
         .toBlocking()
@@ -236,9 +277,9 @@ class TestAccount {
   @Test
   fun testChangePassword() {
    val body = RegisterRequestBody(
-     ACCOUNT,
-     PASSWORD_ENCODED,
-     ACCOUNT,
+     TEACHER_ACCOUNT,
+     STUDENT_PASSWORD_ENCODED,
+     TEACHER_ACCOUNT,
      FAKE_EMAIL_VERIFICATION_CODE,
      STUDENT
    )
@@ -262,8 +303,8 @@ class TestAccount {
         .putHeader("Content-Type", "application/json")
         .rxSendJson(
           LoginRequestBody(
-            ACCOUNT,
-            PASSWORD_ENCODED
+            TEACHER_ACCOUNT,
+            STUDENT_PASSWORD_ENCODED
           )
         )
         .toBlocking()
@@ -286,9 +327,9 @@ class TestAccount {
       .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
-          oldPassword = PASSWORD_ENCODED,
-          newPassword = PASSWORD_ENCODED,
-          newPasswordConfirm = FAKE_PASSWORD_ENCODED
+          oldPassword = STUDENT_PASSWORD_ENCODED,
+          newPassword = STUDENT_PASSWORD_ENCODED,
+          newPasswordConfirm = TEACHER_PASSWORD_ENCODED
         )
       ).toBlocking()
       .value().bodyAsJsonObject()
@@ -300,9 +341,9 @@ class TestAccount {
       .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
-          oldPassword = FAKE_PASSWORD_ENCODED,
-          newPassword = PASSWORD_ENCODED,
-          newPasswordConfirm = PASSWORD_ENCODED
+          oldPassword = TEACHER_PASSWORD_ENCODED,
+          newPassword = STUDENT_PASSWORD_ENCODED,
+          newPasswordConfirm = STUDENT_PASSWORD_ENCODED
         )
       ).toBlocking()
       .value().bodyAsJsonObject()
@@ -314,7 +355,7 @@ class TestAccount {
       .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
-          oldPassword = PASSWORD_ENCODED,
+          oldPassword = STUDENT_PASSWORD_ENCODED,
           newPassword = "12345",
           newPasswordConfirm = "12345"
         )
@@ -329,9 +370,9 @@ class TestAccount {
       .putHeader("Authorization", "Bearer $token")
       .rxSendJson(
         ChangePasswordRequestBody(
-          oldPassword = PASSWORD_ENCODED,
-          newPassword = FAKE_PASSWORD_ENCODED,
-          newPasswordConfirm = FAKE_PASSWORD_ENCODED
+          oldPassword = STUDENT_PASSWORD_ENCODED,
+          newPassword = TEACHER_PASSWORD_ENCODED,
+          newPasswordConfirm = TEACHER_PASSWORD_ENCODED
         )
       ).toBlocking()
       .value().bodyAsJsonObject()
@@ -342,8 +383,8 @@ class TestAccount {
       .putHeader("Content-Type", "application/json")
       .rxSendJson(
         LoginRequestBody(
-          ACCOUNT,
-          FAKE_PASSWORD_ENCODED
+          TEACHER_ACCOUNT,
+          TEACHER_PASSWORD_ENCODED
         )
       )
       .toBlocking()
@@ -361,7 +402,7 @@ class TestAccount {
     val passwordEncoded = "e150a1ec81e8e93e1eae2c3a77e66ec6dbd6a3b460f89c1d08aecf422ee401a0"
     val fakePasswordEncoded = "f33ae3bc9a22cd7564990a794789954409977013966fb1a8f43c35776b833a95"
     val body = RegisterRequestBody(
-      USERNAME,
+      STUDENT_USERNAME,
       passwordEncoded,
       account,
       "666666",
@@ -428,6 +469,7 @@ class TestAccount {
         )
       ).toBlocking()
       .value().bodyAsJsonObject()
+    println(response)
     assertEquals(ERROR, response["code"])
     assertEquals("用户不存在", response["message"])
 
