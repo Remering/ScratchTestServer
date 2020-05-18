@@ -3,21 +3,17 @@ package com.github.io.remering.starter
 import com.github.io.remering.starter.api.mountApi
 import com.github.io.remering.starter.table.Accounts
 import com.github.io.remering.starter.table.Avatars
-import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.http.HttpMethod
 import io.vertx.ext.auth.PubSecKeyOptions
 import io.vertx.ext.auth.jwt.JWTAuthOptions
-import io.vertx.ext.jwt.JWTOptions
 import io.vertx.ext.mail.LoginOption
 import io.vertx.ext.mail.MailConfig
 import io.vertx.ext.mail.StartTLSOptions
 import io.vertx.kotlin.core.json.json
 import io.vertx.kotlin.core.json.obj
+import io.vertx.kotlin.ext.auth.jwt.jwtOptionsOf
 import io.vertx.reactivex.core.AbstractVerticle
-
-import io.vertx.reactivex.core.Context
-import io.vertx.reactivex.core.Vertx
 import io.vertx.reactivex.core.http.HttpServer
 import io.vertx.reactivex.ext.auth.jwt.JWTAuth
 import io.vertx.reactivex.ext.mail.MailClient
@@ -29,8 +25,7 @@ import io.vertx.reactivex.ext.web.handler.ResponseContentTypeHandler
 import me.liuwj.ktorm.database.Database
 import me.liuwj.ktorm.dsl.deleteAll
 import org.sqlite.JDBC
-import java.awt.Desktop
-import java.io.File
+import java.nio.channels.ClosedChannelException
 import java.util.*
 
 
@@ -55,11 +50,23 @@ fun Router.mountCorsHandler() {
 }
 
 fun Router.mountBodyHandler() {
-  route().handler(BodyHandler.create(USER_UPLOAD_FILE_DIRECTORY))
+  route().handler(
+    BodyHandler.create(USER_UPLOAD_FILE_DIRECTORY)
+      .setMergeFormAttributes(true)
+      .setPreallocateBodyBuffer(true)
+  )
 }
 
 fun Router.mountResponseContentTypeHandler() {
   route().handler(ResponseContentTypeHandler.create())
+    .handler { context ->
+      context.addHeadersEndHandler {
+        if (context.response().headers()["content-type"] == null) {
+          context.response().putHeader("content-type", "application/json; charset=utf-8")
+        }
+      }
+      context.next()
+    }
 }
 
 class MainVerticle : AbstractVerticle() {
@@ -73,6 +80,7 @@ class MainVerticle : AbstractVerticle() {
     initAuthHandler()
     initMailClient()
     initWorker()
+
   }
 
   private fun initWorker() {
@@ -92,9 +100,9 @@ class MainVerticle : AbstractVerticle() {
           isSymmetric = true
         }
       )
-      jwtOptions = JWTOptions().apply {
-       setExpiresInMinutes(5)
-      }
+      jwtOptions = jwtOptionsOf(
+        expiresInMinutes = 5
+      )
     }
     jwtAuthProvider = JWTAuth.create(vertx, config)
   }
@@ -125,11 +133,22 @@ class MainVerticle : AbstractVerticle() {
     router.mountBodyHandler()
     router.mountResponseContentTypeHandler()
     router.mountApi(vertx)
+    router.get("/").handler {
+      it.response().end("Hello, world")
+    }
+
     router.route().failureHandler {
+      if (it.failure() is ClosedChannelException) {
+        it.request().connection().close()
+        return@failureHandler
+      }
+
+      it.failure().printStackTrace()
+
+
 
       when (it.statusCode()) {
         500 -> {
-          it.failure().printStackTrace()
           it.response().end(
             json {
               obj(
@@ -149,9 +168,19 @@ class MainVerticle : AbstractVerticle() {
             }
           )
         }
+        400 -> {
+          it.response().end(
+            json {
+              obj(
+                "code" to ERROR,
+                "message" to "用户登录认证错误"
+              )
+            }.toString()
+          )
+        }
       }
     }
-    server.requestHandler(router::handle).listen(6666)
+    server.requestHandler(router::handle).listen(8888)
     startPromise.complete()
   }
 
@@ -166,4 +195,8 @@ class MainVerticle : AbstractVerticle() {
     database.deleteAll(Avatars)
   }
 
+}
+
+fun main() {
+  io.vertx.core.Vertx.vertx().deployVerticle(MainVerticle())
 }
